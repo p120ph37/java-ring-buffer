@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <target name="html">
+        <copy todir="dist">
+            <fileset dir="${basedir}/html"/>
+            <filterset>
+                <filter token="PROJECT_NAME" value="${ant.project.name}"/>
+                <filter token="GH_PROJECT_URL" value="${gh_project_url}"/>
+                <filter token="GH_PAGES_URL" value="${gh_pages_url}"/>
+            </filterset>
+        </copy>
+    </target>
+    <target name="gh-pages" depends="jar,-javadoc-build,html">
+        <exec executable="git" outputproperty="git-branch" failonerror="true">
+            <arg value="rev-parse"/>
+            <arg value="--abbrev-ref"/>
+            <arg value="HEAD"/>
+        </exec>
+        <echo level="info" message="Current branch: ${git-branch}"/>
+        <exec executable="git" failonerror="true">
+            <arg value="checkout"/>
+            <arg value="gh-pages"/>
+        </exec>
+        <exec executable="git" failonerror="true">
+            <arg value="rm"/>
+            <arg value="-r"/>
+            <arg value="*"/>
+        </exec>
+        <exec executable="git" failonerror="true">
+            <arg value="checkout"/>
+            <arg value="HEAD"/>
+            <arg value="./.gitignore"/>
+        </exec>
+        <copy preservelastmodified="true" todir=".">
+            <fileset dir="${basedir}/dist"/>
+        </copy>
+        <exec executable="git">
+            <arg value="add"/>
+            <arg value="${basedir}/*"/>
+        </exec>
+        <exec executable="git">
+            <arg value="commit"/>
+            <arg value="-a"/>
+            <arg value="-m"/>
+            <arg value="generated github pages"/>
+        </exec>
+        <exec executable="git">
+            <arg value="checkout"/>
+            <arg value="${git-branch}"/>
+        </exec>
+    </target>
+</project>
