@@ -2,7 +2,7 @@
 <project name="ring-buffer" default="default" basedir=".">
     <description>Builds, tests, and runs the project ring-buffer.</description>
     <import file="nbproject/build-impl.xml"/>
-    
+
     <property name="gh_project_url" value="https://github.com/p120ph37/java-ring-buffer"/>
     <property name="gh_pages_url" value="http://p120ph37.github.com/java-ring-buffer"/>
     <import file="gh-pages.xml"/>
