@@ -3,6 +3,8 @@
  */
 package com.awirtz.util;
 
+import java.util.Arrays;
+
 /**
  * A ring buffer implementation on top of a byte array.
  * @author Aaron Meriwether
@@ -72,6 +74,41 @@ public class RingBuffer {
     }
     
     /**
+     * Perform a write operation via callbacks on a supplied object.
+     * This is basically an inversion of the RingBuffer "write" method in which
+     * the caller to supplies its own simple "write" method which will be
+     * invoked zero, one, or two times against the RingBuffer's internal byte
+     * array to complete the operation.
+     * 
+     * This is useful to avoid an intermediate buffer when reading from a
+     * source into a RingBuffer.
+     * 
+     * @param writer An object implementing the RingBufferWriter interface.
+     * @param length The number of bytes to be written.
+     * @return The number of bytes successfully written to the RingBuffer.
+     * This may be less than the requested length if there is insufficient free
+     * space in the RingBuffer, or zero if the RingBuffer is full.
+     */
+    public int writer(RingBufferWriter writer, int length) {
+        int head = (this.tail + this.length) % byteArray.length;
+        int toEnd = byteArray.length - head;
+        // if the request exceeds the free space, write as much as possible
+        int toWrite = Math.min(length, byteArray.length - this.length);
+        if(toWrite > toEnd) {
+            // write from the head to the end
+            writer.write(byteArray, head, toEnd);
+            // write the remainder from the beginning
+            writer.write(byteArray, 0, toWrite - toEnd);
+        } else {
+            // write the whole thing at once
+            writer.write(byteArray, head, toWrite);
+        }
+        // writing increases the length
+        this.length += toWrite;
+        return toWrite;
+    }
+    
+    /**
      * Read from the RingBuffer into a byte array.
      * 
      * @param buffer A byte array in which the read data will be placed.
@@ -93,6 +130,41 @@ public class RingBuffer {
         } else {
             // read the whole requested thing at once
             System.arraycopy(byteArray, this.tail, buffer, offset, toRead);
+        }
+        // reading moves the tail and decreases the length
+        this.tail = (this.tail + toRead) % byteArray.length;
+        this.length -= toRead;
+        return toRead;
+    }
+
+    /**
+     * Perform a read operation via callbacks on a supplied object.
+     * This is basically an inversion of the RingBuffer "read" method in which
+     * the caller to supplies its own simple "read" method which will be
+     * invoked zero, one, or two times against the RingBuffer's internal byte
+     * array to complete the operation.
+     * 
+     * This is useful to avoid an intermediate buffer when reading from a
+     * RingBuffer into a destination.
+     * 
+     * @param reader An object implementing the RingBufferReader interface.
+     * @param length The number of bytes to be read.
+     * @return The number of bytes successfully read from the RingBuffer.
+     * This may be less than the requested length if there were fewer bytes in
+     * the buffer, or zero if the buffer was empty.
+     */
+    public int reader(RingBufferReader reader, int length) {
+        int toEnd = byteArray.length - this.tail;
+        // if the request exceeds the available data, read as much as is available
+        int toRead = Math.min(length, this.length);
+        if(toRead > toEnd) {
+            // read from the tail to the end
+            reader.read(byteArray, this.tail, toEnd);
+            // read the requested remainder from the beginning
+            reader.read(byteArray, 0, toRead - toEnd);
+        } else {
+            // read the whole requested thing at once
+            reader.read(byteArray, this.tail, toRead);
         }
         // reading moves the tail and decreases the length
         this.tail = (this.tail + toRead) % byteArray.length;
@@ -138,5 +210,9 @@ public class RingBuffer {
      */
     public int getTail() {
         return tail;
+    }
+    
+    @Override public String toString() {
+        return Arrays.toString(byteArray) + ", " + tail + ", " + length;
     }
 }
